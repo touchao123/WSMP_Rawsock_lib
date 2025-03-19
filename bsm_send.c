@@ -38,8 +38,9 @@
 #define START_ID 11349 // Initial ID for the first packet
 #define INCR_ID 0 // ID increment for each successive packet (all packets will have the same ID in this case)
 
-#include "sample-MessageFrame_der.h"
-#define V2X_MSG_BUF sample_MessageFrame_der_data
+// #include "sample-MessageFrame_der.h"
+#include "sample-MessageFrame_per.h"
+#define V2X_MSG_BUF sample_MessageFrame_per_data
 
 int main (int argc, char **argv) {
 	int sFd;
@@ -230,6 +231,7 @@ int main (int argc, char **argv) {
 	} else {
 		fprintf(stdout,"Timer successfully started. Sending triggered.\n\n");
 	}
+
 
 	printf("WSMPencapsulate wsmpHeader: %ld, payloadsize:%ld \n",sizeof(struct wsmphdr), sizeof(V2X_MSG_BUF));
 

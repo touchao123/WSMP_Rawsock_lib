@@ -1201,7 +1201,7 @@ void WSMPheadPopulate(struct wsmphdr *wsmphead,char version, uint32_t psid)
 	wsmphead->optind=0;
 	wsmphead->version=0x3;
 
-	wsmphead->tpid=0x00;
+	wsmphead->tpid=0;
 
 	/**
 	 *    
@@ -1220,7 +1220,7 @@ void WSMPheadPopulate(struct wsmphdr *wsmphead,char version, uint32_t psid)
 	 */
 
 	//https://github.com/wayties/wireshark/blob/v2x/epan/dissectors/packet-ieee1609.c
-	wsmphead->psid= 32; //https://standards.ieee.org/products-programs/regauth/psid/public/
+	wsmphead->psid= 0x20; //https://standards.ieee.org/products-programs/regauth/psid/public/
 
 	/**
 	 * 
@@ -1248,13 +1248,34 @@ size_t WSMPencapsulate(byte_t *packet,struct wsmphdr *header,byte_t *data,size_t
 {
 	size_t packetsize=sizeof(struct wsmphdr)+payloadsize;
 
-	// header->wsmlen=payloadsize;
-	header->wsmlen=htons(payloadsize);
+	// header->wsmlen=127;
+	// payloadsize = 127;
+	// header->wsmlen=htons(payloadsize);
+	printf("payloadsize: 0x%x htons 0x%x\n",payloadsize,htons(payloadsize));
+	if((payloadsize & 0x80) == 0x80){
+		// header->wsmlen=htons(payloadsize & 0x3fff);
+		header->wsmlen =  (htons(payloadsize) | 0x80);
+	}else{
+		header->wsmlen=htons(payloadsize);
+	}
+	printf("header->wsmlen: 0x%x \n",header->wsmlen);
+
+
+	header->iee1609data[0]=0x03;//protocolVersion
+	header->iee1609data[1]=0x81;
+	header->iee1609data[2]=0x00;
+	header->iee1609data[3]=0x40;
+	header->iee1609data[4]=0x03;//tbsData->payload->data->protocolVersion: 3
+	header->iee1609data[5]=0x80;
+	header->iee1609data[6]=0x81;
+	header->iee1609data[7]=0x85;
 
 	memcpy(packet,header,sizeof(struct wsmphdr));
 	memcpy(packet+sizeof(struct wsmphdr),data,payloadsize);
 
 	// header->check=minirighi_udp_checksum(packet,packetsize,addrs.src,addrs.dst);
+// dissect_Ieee1609Dot2Data_PDU => dissect_ieee1609dot2_Ieee1609Dot2Data
+
 
 	memcpy(packet,header,sizeof(struct wsmphdr));
 

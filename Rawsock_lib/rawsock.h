@@ -135,9 +135,13 @@ struct wsshdr {
 
 }__attribute__((packed));
 
+/**
+ * Protocol Version 3
+ */
 struct wsmphdr {
 	/*
-	* refer to: https://github.com/wayties/wireshark/blob/v2x/epan/dissectors/packet-ieee1609.c#L143
+	* refer to: https://github.com/wayties/wireshark/blob/v2x/epan/dissectors/packet-wsmp.c#L217
+	* dissect_wsmp_v3 
 	*/
  /* N-Header */
 #if defined(__LITTLE_ENDIAN_BITFIELD)
@@ -152,18 +156,18 @@ struct wsmphdr {
 #else
 #error	"Please fix <asm/byteorder.h>"
 #endif
-	// uint8_t reserverd1;
+	// uint8_t reserverd1;// guint16 offset,offset++;
+
 	uint8_t tpid;
+	// uint8_t reserverd2;
 
   /* WSMP-T-Header */
-
-	// uint8_t reserverd2;
 	uint8_t psid;
-	// uint8_t reserverd2;
+	// uint8_t reserverd3;
 	// uint32_t psid;
 	// uint16_t wsmlen;
 	uint8_t wsmlen;
-
+	uint8_t iee1609data[8];
 } __attribute__((packed)); //11
 
 /**
