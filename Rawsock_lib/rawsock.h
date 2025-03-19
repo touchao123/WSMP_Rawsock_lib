@@ -89,9 +89,13 @@
 #define MAC_SCANNER(mac_array) &mac_array[0], &mac_array[1], &mac_array[2], &mac_array[3], &mac_array[4], &mac_array[5] /**< *MAC_SCANNER(_address-variable_)* should be used in combination with [SCN_MAC](\ref SCN_MAC) to specify the variable containing the MAC address (without `&`, as it is already added by *MAC_SCANNER*). For instance, if _addr_ is an allocated variable of type [macaddr_t](\ref macaddr_t), it is possible to store an address inside _addr_ with `scanf(SCN_MAC,MAC_SCANNER(addr))`. \warning No check is performed to ensure that a NULL pointer ([MAC_NULL](\ref MAC_NULL)) is not passed to *MAC_SCANNER*. The check must be manually performed to avoid a segmentation fault (the variable should be already allocated with prepareMacAddrT()).*/
 
 // Size definitions (macros)
+// #define WSSP_PACKET_SIZE(data) sizeof(struct wsshdr)+sizeof(data)  /**< __Size definition__: given *data*, as any variable, the UDP payload size containing the specified *data* is calculated and returned in _bytes_. */
+#define WMSP_PACKET_SIZE(data) sizeof(struct wsmphdr)+sizeof(data)  /**< __Size definition__: given *data*, as any variable, the UDP payload size containing the specified *data* is calculated and returned in _bytes_. */
 #define UDP_PACKET_SIZE(data) sizeof(struct udphdr)+sizeof(data)  /**< __Size definition__: given *data*, as any variable, the UDP payload size containing the specified *data* is calculated and returned in _bytes_. */
 #define IP_UDP_PACKET_SIZE(data) sizeof(struct iphdr)+sizeof(struct udphdr)+sizeof(data) /**< __Size definition__: given *data*, as any variable, the IPv4 + UDP payload size (with basic IHL, i.e. no options) containing the specified *data* is calculated and returned in _bytes_. */
-#define ETH_IP_UDP_PACKET_SIZE(data) sizeof(struct ether_header)+sizeof(struct iphdr)+sizeof(struct udphdr)+sizeof(data) /**< __Size definition__: given *data*, as any variable, the IPv4 + UDP payload size (with basic IHL, i.e. no options), **including struct ether_header**, containing the specified *data* is calculated and returned in _bytes_. */
+// #define ETH_IP_UDP_PACKET_SIZE(data) sizeof(struct ether_header)+sizeof(struct iphdr)+sizeof(struct udphdr)+sizeof(data) /**< __Size definition__: given *data*, as any variable, the IPv4 + UDP payload size (with basic IHL, i.e. no options), **including struct ether_header**, containing the specified *data* is calculated and returned in _bytes_. */
+#define ETH_IP_WSP_PACKET_SIZE(data) sizeof(struct ether_header)+sizeof(struct wsmphdr)+sizeof(data) /**< __Size definition__: given *data*, as any variable, the IPv4 + UDP payload size (with basic IHL, i.e. no options), **including struct ether_header**, containing the specified *data* is calculated and returned in _bytes_. */
+
 
 #define UDP_PACKET_SIZE_S(size) sizeof(struct udphdr)+size /**< __Size definition__: given *size*, in _bytes_, the UDP payload size containing a payload with the specified *size* is calculated and returned in _bytes_. */
 #define IP_UDP_PACKET_SIZE_S(size) sizeof(struct iphdr)+sizeof(struct udphdr)+size /**< __Size definition__: given *size*, in _bytes_, the IPv4 + UDP payload size (with basic IHL, i.e. no options) containing a payload with the specified *size* is calculated and returned in _bytes_. */
@@ -116,6 +120,51 @@ struct ipaddrs {
 	in_addr_t src; /**< Source IPv4 address container.*/
 	in_addr_t dst; /**< Destination IPv4 address container.*/
 };
+
+struct wsshdr {
+	__u8 version;
+	__u8 content;
+
+	uint16_t reserved1;//unused
+	uint16_t reserved2;//unused
+
+	u_int8_t datalen;
+	uint16_t reserved3;//unused
+
+	u_int8_t wsa_version;
+
+}__attribute__((packed));
+
+struct wsmphdr {
+	/*
+	* refer to: https://github.com/wayties/wireshark/blob/v2x/epan/dissectors/packet-ieee1609.c#L143
+	*/
+ /* N-Header */
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+	__u8	version:3,
+	optind:1,
+	subtype:4;
+#elif defined (__BIG_ENDIAN_BITFIELD)
+	__u8	subtype:4,
+	optind:1,
+	version:3;
+
+#else
+#error	"Please fix <asm/byteorder.h>"
+#endif
+	// uint8_t reserverd1;
+	uint8_t tpid;
+
+  /* WSMP-T-Header */
+
+	// uint8_t reserverd2;
+	uint8_t psid;
+	// uint8_t reserverd2;
+	// uint32_t psid;
+	// uint16_t wsmlen;
+	uint8_t wsmlen;
+
+} __attribute__((packed)); //11
 
 /**
 	\brief Protocol type enumerator
@@ -158,6 +207,15 @@ size_t IP4Encapsulate(byte_t *packet,struct iphdr *header,byte_t *sdu,size_t sdu
 // UDP level functions
 void UDPheadPopulate(struct udphdr *UDPhead, unsigned short sourceport, unsigned short destport);
 size_t UDPencapsulate(byte_t *packet,struct udphdr *header,byte_t *data,size_t payloadsize,struct ipaddrs addrs);
+
+// WSMP-sub level functions
+void WSMPheadPopulate(struct wsmphdr *wsmphead,char version, unsigned  psid);
+size_t WSMPencapsulate(byte_t *packet,struct wsmphdr *header,byte_t *data,size_t payloadsize);
+
+// WSS level functions
+void WSSPheadPopulate(struct wsshdr *wssphead,char version, unsigned  wsa_version);
+size_t WSSPencapsulate(byte_t *packet,struct wsshdr *header,byte_t *data,size_t payloadsize);
+
 
 // Receiving device functions
 byte_t *UDPgetpacketpointers(byte_t *pktbuf,struct ether_header **etherHeader, struct iphdr **IPheader,struct udphdr **UDPheader);

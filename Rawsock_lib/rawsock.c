@@ -1170,6 +1170,98 @@ bool validateEthCsum(byte_t *packet, csum16_t csum, csum16_t *combinedcsum, csum
 	return returnVal;
 }
 
+void WSSPheadPopulate(struct wsshdr *wssphead,char version, unsigned  wsa_version)
+{
+	wssphead->version = 0x3;
+	wssphead->content = 0;
+	wssphead->datalen = 0;
+	wssphead->wsa_version = 0x05;
+
+}
+
+size_t WSSPencapsulate(byte_t *packet,struct wsshdr *header,byte_t *data,size_t payloadsize)
+{
+	size_t packetsize=sizeof(struct wsshdr)+payloadsize;
+
+	header->datalen=htons(payloadsize);
+
+	memcpy(packet,header,sizeof(struct wsshdr));
+	memcpy(packet+sizeof(struct wsshdr),data,payloadsize);
+
+	// header->check=minirighi_udp_checksum(packet,packetsize,addrs.src,addrs.dst);
+
+	memcpy(packet,header,sizeof(struct wsshdr));
+
+	return packetsize;
+}
+
+void WSMPheadPopulate(struct wsmphdr *wsmphead,char version, uint32_t psid)
+{
+	wsmphead->subtype=0;
+	wsmphead->optind=0;
+	wsmphead->version=0x3;
+
+	wsmphead->tpid=0x00;
+
+	/**
+	 *    
+	psid = tvb_get_guint8(tvb, offset);
+    psid_len = 1;
+
+    if ((psid & 0xF0) >= 0xE0)
+        psid_len = 4;
+    else if ((psid & 0xF0) >= 0xC0)
+        psid_len = 3;
+    else if ((psid & 0xF0) >= 0x80)
+        psid_len = 2;
+
+    offset += psid_len;
+
+	 */
+
+	//https://github.com/wayties/wireshark/blob/v2x/epan/dissectors/packet-ieee1609.c
+	wsmphead->psid= 32; //https://standards.ieee.org/products-programs/regauth/psid/public/
+
+	/**
+	 * 
+	 *     
+	 * 
+	wsmlen = tvb_get_guint8(tvb, offset);
+    wsmlen_len = 1;
+    offset++;
+
+    if (wsmlen & 0x80) {
+        wsmlen = ((wsmlen & 0x3F) << 8) | tvb_get_guint8(tvb, offset);
+        wsmlen_len = 2;
+        offset++;
+    }
+
+    wsmp_t_len = offset - wsmp_n_len;
+
+	 */
+
+	wsmphead->wsmlen=0;
+
+}
+
+size_t WSMPencapsulate(byte_t *packet,struct wsmphdr *header,byte_t *data,size_t payloadsize)
+{
+	size_t packetsize=sizeof(struct wsmphdr)+payloadsize;
+
+	// header->wsmlen=payloadsize;
+	header->wsmlen=htons(payloadsize);
+
+	memcpy(packet,header,sizeof(struct wsmphdr));
+	memcpy(packet+sizeof(struct wsmphdr),data,payloadsize);
+
+	// header->check=minirighi_udp_checksum(packet,packetsize,addrs.src,addrs.dst);
+
+	memcpy(packet,header,sizeof(struct wsmphdr));
+
+	return packetsize;
+}
+
+
 /**
 	\brief Test function: inject a checksum error in an IP packet
 
